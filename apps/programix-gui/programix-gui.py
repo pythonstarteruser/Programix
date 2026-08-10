@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import subprocess
 import gi
 
@@ -7,7 +8,57 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
 
+PROGRAMIX_SETTINGS = os.path.expanduser(
+    "~/Programix/config/settings.conf"
+)
+
+
+def get_programix_theme():
+    if not os.path.isfile(PROGRAMIX_SETTINGS):
+        return "system"
+
+    with open(
+        PROGRAMIX_SETTINGS,
+        "r",
+        encoding="utf-8"
+    ) as file:
+        for line in file:
+            line = line.strip()
+
+            if line.startswith("PROGRAMIX_THEME="):
+                return (
+                    line.split("=", 1)[1]
+                    .strip()
+                    .strip('"')
+                    .lower()
+                )
+
+    return "system"
+
+
+def apply_programix_theme():
+    theme = get_programix_theme()
+
+    settings = Gtk.Settings.get_default()
+
+    if settings is None:
+        return
+
+    if theme == "dark":
+        settings.set_property(
+            "gtk-theme-name",
+            "Adwaita:dark"
+        )
+
+    elif theme == "light":
+        settings.set_property(
+            "gtk-theme-name",
+            "Adwaita"
+        )
+
+
 class ProgramixWindow(Gtk.ApplicationWindow):
+
     def __init__(self, app):
         super().__init__(application=app)
 
@@ -33,17 +84,34 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         sidebar.set_size_request(190, -1)
 
         logo = Gtk.Label()
+
         logo.set_markup(
-            "<span size='18000' weight='bold'>🐧 Programix</span>"
+            "<span size='18000' weight='bold'>"
+            "🐧 Programix"
+            "</span>"
         )
 
         sidebar.append(logo)
 
-        home_button = Gtk.Button(label="🏠  Home")
-        system_button = Gtk.Button(label="💻  System")
-        hardware_button = Gtk.Button(label="🔧  Hardware")
-        apps_button = Gtk.Button(label="🧩  Applications")
-        settings_button = Gtk.Button(label="⚙️  Settings")
+        home_button = Gtk.Button(
+            label="🏠  Home"
+        )
+
+        system_button = Gtk.Button(
+            label="💻  System"
+        )
+
+        hardware_button = Gtk.Button(
+            label="🔧  Hardware"
+        )
+
+        apps_button = Gtk.Button(
+            label="🧩  Applications"
+        )
+
+        settings_button = Gtk.Button(
+            label="⚙️  Settings"
+        )
 
         sidebar.append(home_button)
         sidebar.append(system_button)
@@ -72,11 +140,30 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.set_child(main_box)
 
         # Button actions
-        home_button.connect("clicked", self.show_home)
-        system_button.connect("clicked", self.show_system_info)
-        hardware_button.connect("clicked", self.show_hardware_info)
-        apps_button.connect("clicked", self.show_applications)
-        settings_button.connect("clicked", self.show_settings)
+        home_button.connect(
+            "clicked",
+            self.show_home
+        )
+
+        system_button.connect(
+            "clicked",
+            self.show_system_info
+        )
+
+        hardware_button.connect(
+            "clicked",
+            self.show_hardware_info
+        )
+
+        apps_button.connect(
+            "clicked",
+            self.show_applications
+        )
+
+        settings_button.connect(
+            "clicked",
+            self.show_settings
+        )
 
         # Start on Home
         self.show_home(None)
@@ -89,8 +176,11 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.clear_content()
 
         title = Gtk.Label()
+
         title.set_markup(
-            "<span size='26000' weight='bold'>Welcome to ProgramixOS</span>"
+            "<span size='26000' weight='bold'>"
+            "Welcome to ProgramixOS"
+            "</span>"
         )
 
         subtitle = Gtk.Label(
@@ -114,8 +204,11 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.clear_content()
 
         title = Gtk.Label()
+
         title.set_markup(
-            "<span size='24000' weight='bold'>💻 System Information</span>"
+            "<span size='24000' weight='bold'>"
+            "💻 System Information"
+            "</span>"
         )
 
         result = subprocess.run(
@@ -145,8 +238,11 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.clear_content()
 
         title = Gtk.Label()
+
         title.set_markup(
-            "<span size='24000' weight='bold'>🔧 Hardware</span>"
+            "<span size='24000' weight='bold'>"
+            "🔧 Hardware"
+            "</span>"
         )
 
         result = subprocess.run(
@@ -176,8 +272,11 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.clear_content()
 
         title = Gtk.Label()
+
         title.set_markup(
-            "<span size='24000' weight='bold'>🧩 Applications</span>"
+            "<span size='24000' weight='bold'>"
+            "🧩 Applications"
+            "</span>"
         )
 
         subtitle = Gtk.Label(
@@ -192,9 +291,17 @@ class ProgramixWindow(Gtk.ApplicationWindow):
             spacing=15
         )
 
-        system_app = Gtk.Button(label="💻\nSystem")
-        hardware_app = Gtk.Button(label="🔧\nHardware")
-        settings_app = Gtk.Button(label="⚙️\nSettings")
+        system_app = Gtk.Button(
+            label="💻\nSystem"
+        )
+
+        hardware_app = Gtk.Button(
+            label="🔧\nHardware"
+        )
+
+        settings_app = Gtk.Button(
+            label="⚙️\nSettings"
+        )
 
         system_app.set_size_request(150, 100)
         hardware_app.set_size_request(150, 100)
@@ -224,20 +331,25 @@ class ProgramixWindow(Gtk.ApplicationWindow):
     def show_settings(self, button):
         subprocess.Popen(
             [
-                "bash",
-                "-c",
-                '"$HOME/Programix/apps/programix-settings/programix-settings.sh"'
+                "python3",
+                os.path.expanduser(
+                    "~/Programix/apps/programix-settings/"
+                    "programix-settings.py"
+                )
             ]
         )
 
 
 class ProgramixApp(Gtk.Application):
+
     def __init__(self):
         super().__init__(
             application_id="org.programix.desktop"
         )
 
     def do_activate(self):
+        apply_programix_theme()
+
         window = ProgramixWindow(self)
         window.present()
 
