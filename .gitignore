@@ -1,0 +1,32 @@
+# Build output
+build/*
+iso/*
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Editor settings
+.vscode/*
+!.vscode/extensions.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Generated files
+*.iso
+*.img
+*.squashfs
+
+# Local development files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
