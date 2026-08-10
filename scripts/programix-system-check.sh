@@ -1,80 +1,72 @@
 #!/usr/bin/env bash
 
+PROGRAMIX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CORE="$PROGRAMIX_ROOT/apps/programix-core/programix-core.sh"
+
+if [ ! -f "$CORE" ]; then
+    echo "ERROR: Programix Core not found."
+    exit 1
+fi
+
+source "$CORE"
+
+ERRORS=0
+WARNINGS=0
+
+check_command() {
+    if programix_is_command_available "$1"; then
+        echo "✓ $2"
+    else
+        echo "✗ $2"
+        ((ERRORS++))
+    fi
+}
+
+check_service() {
+    if programix_is_service_active "$1"; then
+        echo "✓ $2"
+    else
+        echo "✗ $2"
+        ((ERRORS++))
+    fi
+}
+
 echo "================================"
 echo "     🐧 PROGRAMIX SYSTEM CHECK"
 echo "================================"
 echo
 
-errors=0
-warnings=0
-
-check_command() {
-    local name="$1"
-    local command="$2"
-
-    if command -v "$command" >/dev/null 2>&1; then
-        echo "✓ $name"
-    else
-        echo "✗ $name"
-        ((errors++))
-    fi
-}
-
-check_service() {
-    local name="$1"
-    local service="$2"
-
-    if systemctl is-active --quiet "$service"; then
-        echo "✓ $name"
-    else
-        echo "⚠ $name"
-        ((warnings++))
-    fi
-}
-
 echo "Core system:"
-check_command "Linux kernel" "uname"
-check_command "systemd" "systemctl"
-check_command "APT" "apt"
+check_command "uname" "Linux kernel"
+check_command "systemctl" "systemd"
+check_command "apt" "APT"
 
 echo
 echo "Desktop:"
-
-if command -v gnome-shell >/dev/null 2>&1; then
-    echo "✓ GNOME"
-else
-    echo "✗ GNOME"
-    ((errors++))
-fi
+check_command "gnome-shell" "GNOME"
 
 if [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then
     echo "✓ Wayland"
 else
-    echo "⚠ Wayland session not detected"
-    ((warnings++))
+    echo "⚠ Wayland"
+    ((WARNINGS++))
 fi
 
 echo
 echo "System services:"
-check_service "NetworkManager" "NetworkManager.service"
+check_service "NetworkManager.service" "NetworkManager"
+check_service "fwupd.service" "fwupd"
 
-if systemctl --user is-active --quiet pipewire.service 2>/dev/null; then
+if programix_is_user_service_active "pipewire.service"; then
     echo "✓ PipeWire"
 else
     echo "⚠ PipeWire"
-    ((warnings++))
+    ((WARNINGS++))
 fi
-
-check_service "fwupd" "fwupd.service"
 
 echo
 echo "System information:"
-
-if command -v lsb_release >/dev/null 2>&1; then
-    distro=$(lsb_release -ds)
-    echo "  Base: $distro"
-fi
-
+echo "  Base: $PROGRAMIX_BASE"
 echo "  Kernel: $(uname -r)"
 echo "  Architecture: $(uname -m)"
 echo "  Session: ${XDG_SESSION_TYPE:-Unknown}"
@@ -82,17 +74,12 @@ echo "  Session: ${XDG_SESSION_TYPE:-Unknown}"
 echo
 echo "================================"
 
-if [ "$errors" -eq 0 ] && [ "$warnings" -eq 0 ]; then
+if [ "$ERRORS" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
     echo "SYSTEM STATUS: OK ✓"
-elif [ "$errors" -eq 0 ]; then
-    echo "SYSTEM STATUS: WARNING ⚠"
 else
     echo "SYSTEM STATUS: ERROR ✗"
 fi
 
-echo "Errors: $errors"
-echo "Warnings: $warnings"
-
+echo "Errors: $ERRORS"
+echo "Warnings: $WARNINGS"
 echo "================================"
-
-exit "$errors"
