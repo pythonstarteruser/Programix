@@ -36,8 +36,7 @@ programix_launcher() {
             ;;
 
         4)
-            source "$PROGRAMIX_ROOT/apps/programix-core/programix-core.sh"
-            programix_settings
+            "$PROGRAMIX_ROOT/apps/programix-settings/programix-settings.sh"
             ;;
 
         5)
