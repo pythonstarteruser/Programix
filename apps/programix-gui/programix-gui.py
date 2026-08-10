@@ -12,62 +12,112 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         super().__init__(application=app)
 
         self.set_title("ProgramixOS")
-        self.set_default_size(800, 500)
+        self.set_default_size(1000, 650)
 
+        # Main layout
         main_box = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL,
-            spacing=12
-        )
-
-        main_box.set_margin_top(30)
-        main_box.set_margin_bottom(30)
-        main_box.set_margin_start(30)
-        main_box.set_margin_end(30)
-
-        title = Gtk.Label()
-        title.set_markup(
-            "<span size='24000' weight='bold'>🐧 ProgramixOS</span>"
-        )
-
-        version = Gtk.Label(label="Programix 0.1.0-dev")
-        base = Gtk.Label(label="Ubuntu 26.04 LTS")
-
-        welcome = Gtk.Label(
-            label="Welcome to ProgramixOS"
-        )
-
-        button_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
-            spacing=10
+            spacing=0
         )
 
-        system_button = Gtk.Button(label="System")
-        system_button.connect(
-            "clicked",
-            self.show_system_info
+        # Sidebar
+        sidebar = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=8
         )
 
-        hardware_button = Gtk.Button(label="Hardware")
-        hardware_button.connect(
-            "clicked",
-            self.show_hardware_info
+        sidebar.set_margin_top(20)
+        sidebar.set_margin_bottom(20)
+        sidebar.set_margin_start(15)
+        sidebar.set_margin_end(15)
+        sidebar.set_size_request(190, -1)
+
+        logo = Gtk.Label()
+        logo.set_markup(
+            "<span size='18000' weight='bold'>🐧 Programix</span>"
         )
 
-        apps_button = Gtk.Button(label="Applications")
+        sidebar.append(logo)
 
-        button_box.append(system_button)
-        button_box.append(hardware_button)
-        button_box.append(apps_button)
+        home_button = Gtk.Button(label="🏠  Home")
+        system_button = Gtk.Button(label="💻  System")
+        hardware_button = Gtk.Button(label="🔧  Hardware")
+        apps_button = Gtk.Button(label="🧩  Applications")
+        settings_button = Gtk.Button(label="⚙️  Settings")
 
-        main_box.append(title)
-        main_box.append(welcome)
-        main_box.append(version)
-        main_box.append(base)
-        main_box.append(button_box)
+        sidebar.append(home_button)
+        sidebar.append(system_button)
+        sidebar.append(hardware_button)
+        sidebar.append(apps_button)
+
+        spacer = Gtk.Box()
+        sidebar.append(spacer)
+
+        sidebar.append(settings_button)
+
+        # Content area
+        self.content_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=15
+        )
+
+        self.content_box.set_margin_top(30)
+        self.content_box.set_margin_bottom(30)
+        self.content_box.set_margin_start(30)
+        self.content_box.set_margin_end(30)
+
+        main_box.append(sidebar)
+        main_box.append(self.content_box)
 
         self.set_child(main_box)
 
+        # Button actions
+        home_button.connect("clicked", self.show_home)
+        system_button.connect("clicked", self.show_system_info)
+        hardware_button.connect("clicked", self.show_hardware_info)
+        apps_button.connect("clicked", self.show_applications)
+        settings_button.connect("clicked", self.show_settings)
+
+        # Start on Home
+        self.show_home(None)
+
+    def clear_content(self):
+        while child := self.content_box.get_first_child():
+            self.content_box.remove(child)
+
+    def show_home(self, button):
+        self.clear_content()
+
+        title = Gtk.Label()
+        title.set_markup(
+            "<span size='26000' weight='bold'>Welcome to ProgramixOS</span>"
+        )
+
+        subtitle = Gtk.Label(
+            label="Your Programix desktop environment"
+        )
+
+        version = Gtk.Label(
+            label="Programix 0.1.0-dev"
+        )
+
+        base = Gtk.Label(
+            label="Ubuntu 26.04 LTS"
+        )
+
+        self.content_box.append(title)
+        self.content_box.append(subtitle)
+        self.content_box.append(version)
+        self.content_box.append(base)
+
     def show_system_info(self, button):
+        self.clear_content()
+
+        title = Gtk.Label()
+        title.set_markup(
+            "<span size='24000' weight='bold'>💻 System Information</span>"
+        )
+
         result = subprocess.run(
             [
                 "bash",
@@ -81,35 +131,24 @@ class ProgramixWindow(Gtk.ApplicationWindow):
             text=True
         )
 
-        dialog = Gtk.Dialog(
-            transient_for=self,
-            modal=True
-        )
-
-        dialog.set_title("Programix System Information")
-        dialog.set_default_size(450, 250)
-
-        content = dialog.get_content_area()
-
-        label = Gtk.Label(
+        info = Gtk.Label(
             label=result.stdout.strip()
         )
 
-        label.set_xalign(0)
-        label.set_selectable(True)
+        info.set_xalign(0)
+        info.set_selectable(True)
 
-        content.append(label)
-
-        dialog.add_button("OK", Gtk.ResponseType.OK)
-
-        dialog.connect(
-            "response",
-            lambda dialog, response: dialog.destroy()
-        )
-
-        dialog.present()
+        self.content_box.append(title)
+        self.content_box.append(info)
 
     def show_hardware_info(self, button):
+        self.clear_content()
+
+        title = Gtk.Label()
+        title.set_markup(
+            "<span size='24000' weight='bold'>🔧 Hardware</span>"
+        )
+
         result = subprocess.run(
             [
                 "bash",
@@ -122,34 +161,74 @@ class ProgramixWindow(Gtk.ApplicationWindow):
             text=True
         )
 
-        dialog = Gtk.Dialog(
-            transient_for=self,
-            modal=True
-        )
-
-        dialog.set_title("Programix Hardware")
-        dialog.set_default_size(700, 600)
-
-        content = dialog.get_content_area()
-
-        label = Gtk.Label(
+        info = Gtk.Label(
             label=result.stdout.strip()
         )
 
-        label.set_xalign(0)
-        label.set_yalign(0)
-        label.set_selectable(True)
+        info.set_xalign(0)
+        info.set_yalign(0)
+        info.set_selectable(True)
 
-        content.append(label)
+        self.content_box.append(title)
+        self.content_box.append(info)
 
-        dialog.add_button("OK", Gtk.ResponseType.OK)
+    def show_applications(self, button):
+        self.clear_content()
 
-        dialog.connect(
-            "response",
-            lambda dialog, response: dialog.destroy()
+        title = Gtk.Label()
+        title.set_markup(
+            "<span size='24000' weight='bold'>🧩 Applications</span>"
         )
 
-        dialog.present()
+        subtitle = Gtk.Label(
+            label="Programix system applications"
+        )
+
+        self.content_box.append(title)
+        self.content_box.append(subtitle)
+
+        app_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=15
+        )
+
+        system_app = Gtk.Button(label="💻\nSystem")
+        hardware_app = Gtk.Button(label="🔧\nHardware")
+        settings_app = Gtk.Button(label="⚙️\nSettings")
+
+        system_app.set_size_request(150, 100)
+        hardware_app.set_size_request(150, 100)
+        settings_app.set_size_request(150, 100)
+
+        system_app.connect(
+            "clicked",
+            self.show_system_info
+        )
+
+        hardware_app.connect(
+            "clicked",
+            self.show_hardware_info
+        )
+
+        settings_app.connect(
+            "clicked",
+            self.show_settings
+        )
+
+        app_box.append(system_app)
+        app_box.append(hardware_app)
+        app_box.append(settings_app)
+
+        self.content_box.append(app_box)
+
+    def show_settings(self, button):
+        subprocess.Popen(
+            [
+                "bash",
+                "-c",
+                '"$HOME/Programix/apps/programix-settings/programix-settings.sh"'
+            ]
+        )
 
 
 class ProgramixApp(Gtk.Application):
