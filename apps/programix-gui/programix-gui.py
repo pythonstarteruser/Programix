@@ -2,10 +2,12 @@
 
 import os
 import subprocess
+from datetime import datetime
+
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 
 PROGRAMIX_SETTINGS = os.path.expanduser(
@@ -57,21 +59,245 @@ def apply_programix_theme():
         )
 
 
+def get_battery_info():
+    try:
+        result = subprocess.run(
+            ["upower", "-e"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        batteries = [
+            line.strip()
+            for line in result.stdout.splitlines()
+            if "/battery_" in line
+        ]
+
+        total_energy = 0.0
+        total_full = 0.0
+        charging = False
+
+        for battery in batteries:
+            info = subprocess.run(
+                ["upower", "-i", battery],
+                capture_output=True,
+                text=True
+            )
+
+            for line in info.stdout.splitlines():
+                line = line.strip()
+
+                if line.startswith("energy:"):
+                    try:
+                        value = (
+                            line.split(":", 1)[1]
+                            .replace("Wh", "")
+                            .replace(",", ".")
+                            .strip()
+                        )
+
+                        total_energy += float(value)
+
+                    except ValueError:
+                        pass
+
+                elif line.startswith("energy-full:"):
+                    try:
+                        value = (
+                            line.split(":", 1)[1]
+                            .replace("Wh", "")
+                            .replace(",", ".")
+                            .strip()
+                        )
+
+                        total_full += float(value)
+
+                    except ValueError:
+                        pass
+
+                elif line.startswith("state:"):
+                    state = line.split(":", 1)[1].strip()
+
+                    if state in (
+                        "charging",
+                        "pending-charge"
+                    ):
+                        charging = True
+
+        if total_full <= 0:
+            return (
+                "🔋 --",
+                "Battery information unavailable"
+            )
+
+        percentage = round(
+            (total_energy / total_full) * 100
+        )
+
+        percentage = max(
+            0,
+            min(100, percentage)
+        )
+
+        if charging:
+            icon = "🔌"
+            status = "Charging"
+        elif percentage <= 10:
+            icon = "🪫"
+            status = "Critical battery"
+        elif percentage <= 30:
+            icon = "🔋"
+            status = "Low battery"
+        else:
+            icon = "🔋"
+            status = "Battery"
+
+        return (
+            f"{icon} {percentage}%",
+            status
+        )
+
+    except Exception:
+        return (
+            "🔋 --",
+            "Battery information unavailable"
+        )
+
+
 class ProgramixWindow(Gtk.ApplicationWindow):
 
     def __init__(self, app):
-        super().__init__(application=app)
+        super().__init__(
+            application=app
+        )
 
         self.set_title("ProgramixOS")
         self.set_default_size(1000, 650)
 
-        # Main layout
-        main_box = Gtk.Box(
+        # =====================================================
+        # MAIN LAYOUT
+        # =====================================================
+
+        root_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=0
+        )
+
+        # =====================================================
+        # TOP PANEL
+        # =====================================================
+
+        panel = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=12
+        )
+
+        panel.set_margin_top(8)
+        panel.set_margin_bottom(8)
+        panel.set_margin_start(15)
+        panel.set_margin_end(15)
+
+        logo = Gtk.Label()
+
+        logo.set_markup(
+            "<span size='16000' weight='bold'>"
+            "🐧 Programix"
+            "</span>"
+        )
+
+        logo.set_xalign(0)
+
+        panel.append(logo)
+
+        panel_spacer = Gtk.Box()
+        panel_spacer.set_hexpand(True)
+
+        panel.append(panel_spacer)
+
+        # Clock
+
+        self.clock_label = Gtk.Label()
+
+        panel.append(
+            self.clock_label
+        )
+
+        # Notifications
+
+        notifications_button = Gtk.Button(
+            label="🔔"
+        )
+
+        notifications_button.set_tooltip_text(
+            "Notifications"
+        )
+
+        panel.append(
+            notifications_button
+        )
+
+        # Network
+
+        network_button = Gtk.Button(
+            label="📶"
+        )
+
+        network_button.set_tooltip_text(
+            "Network"
+        )
+
+        panel.append(
+            network_button
+        )
+
+        # Audio
+
+        audio_button = Gtk.Button(
+            label="🔊"
+        )
+
+        audio_button.set_tooltip_text(
+            "Audio"
+        )
+
+        panel.append(
+            audio_button
+        )
+
+        # Battery
+
+        self.battery_button = Gtk.Button(
+            label="🔋 --"
+        )
+
+        self.battery_button.set_tooltip_text(
+            "Battery"
+        )
+
+        panel.append(
+            self.battery_button
+        )
+
+        root_box.append(
+            panel
+        )
+
+        # =====================================================
+        # DESKTOP
+        # =====================================================
+
+        desktop_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=0
         )
 
-        # Sidebar
+        desktop_box.set_vexpand(True)
+
+        # =====================================================
+        # SIDEBAR
+        # =====================================================
+
         sidebar = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=8
@@ -81,17 +307,11 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         sidebar.set_margin_bottom(20)
         sidebar.set_margin_start(15)
         sidebar.set_margin_end(15)
-        sidebar.set_size_request(190, -1)
 
-        logo = Gtk.Label()
-
-        logo.set_markup(
-            "<span size='18000' weight='bold'>"
-            "🐧 Programix"
-            "</span>"
+        sidebar.set_size_request(
+            190,
+            -1
         )
-
-        sidebar.append(logo)
 
         home_button = Gtk.Button(
             label="🏠  Home"
@@ -118,12 +338,25 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         sidebar.append(hardware_button)
         sidebar.append(apps_button)
 
-        spacer = Gtk.Box()
-        sidebar.append(spacer)
+        sidebar_spacer = Gtk.Box()
+        sidebar_spacer.set_vexpand(True)
 
-        sidebar.append(settings_button)
+        sidebar.append(
+            sidebar_spacer
+        )
 
-        # Content area
+        sidebar.append(
+            settings_button
+        )
+
+        desktop_box.append(
+            sidebar
+        )
+
+        # =====================================================
+        # CONTENT
+        # =====================================================
+
         self.content_box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=15
@@ -134,12 +367,25 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.content_box.set_margin_start(30)
         self.content_box.set_margin_end(30)
 
-        main_box.append(sidebar)
-        main_box.append(self.content_box)
+        self.content_box.set_hexpand(True)
+        self.content_box.set_vexpand(True)
 
-        self.set_child(main_box)
+        desktop_box.append(
+            self.content_box
+        )
 
-        # Button actions
+        root_box.append(
+            desktop_box
+        )
+
+        self.set_child(
+            root_box
+        )
+
+        # =====================================================
+        # BUTTON ACTIONS
+        # =====================================================
+
         home_button.connect(
             "clicked",
             self.show_home
@@ -165,14 +411,77 @@ class ProgramixWindow(Gtk.ApplicationWindow):
             self.show_settings
         )
 
-        # Start on Home
+        # =====================================================
+        # INITIAL CONTENT
+        # =====================================================
+
         self.show_home(None)
 
+        # Clock update
+
+        self.update_clock()
+
+        GLib.timeout_add(
+            1000,
+            self.update_clock
+        )
+
+        # Battery update
+
+        self.update_battery()
+
+        GLib.timeout_add(
+            30000,
+            self.update_battery
+        )
+
+    # =========================================================
+    # CLOCK
+    # =========================================================
+
+    def update_clock(self):
+
+        now = datetime.now()
+
+        self.clock_label.set_label(
+            now.strftime("%H:%M")
+        )
+
+        return True
+
+    # =========================================================
+    # BATTERY
+    # =========================================================
+
+    def update_battery(self):
+
+        battery_text, battery_status = get_battery_info()
+
+        self.battery_button.set_label(
+            battery_text
+        )
+
+        self.battery_button.set_tooltip_text(
+            battery_status
+        )
+
+        return True
+
+    # =========================================================
+    # CLEAR CONTENT
+    # =========================================================
+
     def clear_content(self):
+
         while child := self.content_box.get_first_child():
             self.content_box.remove(child)
 
+    # =========================================================
+    # HOME
+    # =========================================================
+
     def show_home(self, button):
+
         self.clear_content()
 
         title = Gtk.Label()
@@ -200,7 +509,12 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.content_box.append(version)
         self.content_box.append(base)
 
+    # =========================================================
+    # SYSTEM INFORMATION
+    # =========================================================
+
     def show_system_info(self, button):
+
         self.clear_content()
 
         title = Gtk.Label()
@@ -234,7 +548,12 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.content_box.append(title)
         self.content_box.append(info)
 
+    # =========================================================
+    # HARDWARE
+    # =========================================================
+
     def show_hardware_info(self, button):
+
         self.clear_content()
 
         title = Gtk.Label()
@@ -268,7 +587,12 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         self.content_box.append(title)
         self.content_box.append(info)
 
+    # =========================================================
+    # APPLICATIONS
+    # =========================================================
+
     def show_applications(self, button):
+
         self.clear_content()
 
         title = Gtk.Label()
@@ -303,9 +627,20 @@ class ProgramixWindow(Gtk.ApplicationWindow):
             label="⚙️\nSettings"
         )
 
-        system_app.set_size_request(150, 100)
-        hardware_app.set_size_request(150, 100)
-        settings_app.set_size_request(150, 100)
+        system_app.set_size_request(
+            150,
+            100
+        )
+
+        hardware_app.set_size_request(
+            150,
+            100
+        )
+
+        settings_app.set_size_request(
+            150,
+            100
+        )
 
         system_app.connect(
             "clicked",
@@ -326,9 +661,16 @@ class ProgramixWindow(Gtk.ApplicationWindow):
         app_box.append(hardware_app)
         app_box.append(settings_app)
 
-        self.content_box.append(app_box)
+        self.content_box.append(
+            app_box
+        )
+
+    # =========================================================
+    # SETTINGS
+    # =========================================================
 
     def show_settings(self, button):
+
         subprocess.Popen(
             [
                 "python3",
@@ -343,16 +685,22 @@ class ProgramixWindow(Gtk.ApplicationWindow):
 class ProgramixApp(Gtk.Application):
 
     def __init__(self):
+
         super().__init__(
             application_id="org.programix.desktop"
         )
 
     def do_activate(self):
+
         apply_programix_theme()
 
-        window = ProgramixWindow(self)
+        window = ProgramixWindow(
+            self
+        )
+
         window.present()
 
 
 app = ProgramixApp()
+
 app.run()
