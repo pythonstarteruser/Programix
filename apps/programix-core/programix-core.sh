@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 
-PROGRAMIX_NAME="Programix"
-PROGRAMIX_VERSION="0.1.0-dev"
-PROGRAMIX_BASE="Ubuntu 26.04 LTS"
+PROGRAMIX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROGRAMIX_CONFIG="$PROGRAMIX_ROOT/config/programix.conf"
+
+if [ ! -f "$PROGRAMIX_CONFIG" ]; then
+    echo "ERROR: Programix configuration not found."
+    return 1 2>/dev/null || exit 1
+fi
+
+source "$PROGRAMIX_CONFIG"
 
 programix_info() {
     echo "Programix $PROGRAMIX_VERSION"
