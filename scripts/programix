@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+PROGRAMIX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+case "$1" in
+    info)
+        "$PROGRAMIX_ROOT/scripts/programix-info.sh"
+        ;;
+
+    check)
+        "$PROGRAMIX_ROOT/scripts/programix-system-check.sh"
+        ;;
+
+    hardware)
+        "$PROGRAMIX_ROOT/scripts/programix-hardware.sh"
+        ;;
+
+    settings)
+        source "$PROGRAMIX_ROOT/apps/programix-core/programix-core.sh"
+        programix_settings
+        ;;
+
+    *)
+        echo "🐧 Programix CLI"
+        echo
+        echo "Usage: programix <command>"
+        echo
+        echo "Commands:"
+        echo "  info       Show system information"
+        echo "  check      Check system status"
+        echo "  hardware   Show hardware information"
+        echo "  settings   Show Programix settings"
+        ;;
+esac
