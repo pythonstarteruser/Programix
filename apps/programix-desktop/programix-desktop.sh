@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 
 PROGRAMIX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 CORE="$PROGRAMIX_ROOT/apps/programix-core/programix-core.sh"
+LAUNCHER="$PROGRAMIX_ROOT/apps/programix-launcher/programix-launcher.sh"
 
 source "$CORE"
+
+if [ ! -f "$LAUNCHER" ]; then
+    echo "ERROR: Programix Launcher not found."
+    exit 1
+fi
+
+source "$LAUNCHER"
 
 while true; do
     clear
@@ -14,41 +23,20 @@ while true; do
     echo
     echo "Version: $PROGRAMIX_VERSION"
     echo
-    echo "[1] System Information"
-    echo "[2] System Check"
-    echo "[3] Hardware"
-    echo "[4] Settings"
-    echo "[5] Exit"
+    echo "[1] Applications"
+    echo "[2] Exit"
     echo
     echo "================================"
+
     read -rp "Select: " choice
 
     case "$choice" in
         1)
-            clear
-            "$PROGRAMIX_ROOT/scripts/programix-info.sh"
+            programix_launcher
             read -rp "Press Enter to continue..."
             ;;
 
         2)
-            clear
-            "$PROGRAMIX_ROOT/scripts/programix-system-check.sh"
-            read -rp "Press Enter to continue..."
-            ;;
-
-        3)
-            clear
-            "$PROGRAMIX_ROOT/scripts/programix-hardware.sh"
-            read -rp "Press Enter to continue..."
-            ;;
-
-        4)
-            clear
-            programix_settings
-            read -rp "Press Enter to continue..."
-            ;;
-
-        5)
             clear
             echo "Goodbye from ProgramixOS! 🐧"
             exit 0
